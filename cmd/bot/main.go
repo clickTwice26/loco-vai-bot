@@ -11,6 +11,7 @@ import (
 	"localoy-bot/config"
 	"localoy-bot/internal/bot"
 	"localoy-bot/internal/command"
+	"localoy-bot/internal/memory"
 	"localoy-bot/internal/server"
 	"localoy-bot/internal/service"
 	"localoy-bot/pkg/logger"
@@ -38,8 +39,32 @@ func run() error {
 		"log_format", cfg.LogFormat,
 	)
 
-	// 3. Initialize domain services
+	// 3. Initialize domain services & memory
 	systemService := service.NewSystemService()
+
+	// Initialize Chat Memory (Redis or in-memory fallback)
+	memoryStore := memory.NewStore(context.Background(), cfg.RedisURL, cfg.MaxChatHistory, log)
+	defer memoryStore.Close()
+
+	// Initialize Gemini AI Client and Persona Service
+	geminiClient := service.NewGeminiClient(cfg.GeminiAPIKey, cfg.GeminiModel)
+	locoAIService := service.NewLocoAIService(
+		geminiClient,
+		memoryStore,
+		cfg.LocoChannelID,
+		cfg.ChatResponseChance,
+		log,
+	)
+
+	if locoAIService.IsConfigured() {
+		log.Info("loco AI chat feature initialized",
+			"channel_id", cfg.LocoChannelID,
+			"model", cfg.GeminiModel,
+			"max_history", cfg.MaxChatHistory,
+		)
+	} else {
+		log.Info("loco AI chat feature is inactive (LOCO_CHANNEL_ID or GEMINI_API_KEY not set)")
+	}
 
 	// 4. Initialize command registry and attach middlewares
 	cmdRegistry := command.NewRegistry(log)
@@ -57,7 +82,7 @@ func run() error {
 	)
 
 	// 6. Instantiate Discord bot lifecycle manager
-	discordBot, err := bot.New(cfg, log, cmdRegistry, systemService)
+	discordBot, err := bot.New(cfg, log, cmdRegistry, systemService, locoAIService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize bot: %w", err)
 	}

@@ -29,6 +29,22 @@ type Config struct {
 	Port string
 	// RemoveCommandsOnShutdown determines if commands should be deleted from Discord when bot shuts down.
 	RemoveCommandsOnShutdown bool
+
+	// GeminiAI Configuration
+	GeminiAPIKey string
+	GeminiModel  string
+
+	// LocoChannelID is the specific Discord channel ID where Loco AI chats with users.
+	LocoChannelID string
+
+	// RedisURL is the connection string for Redis memory (e.g. redis://:password@host:6379/0).
+	RedisURL string
+
+	// MaxChatHistory is the number of messages to remember for conversation context (default: 15).
+	MaxChatHistory int
+
+	// ChatResponseChance is the probability (0.0 to 1.0) of Loco casually chiming in on unprompted messages.
+	ChatResponseChance float64
 }
 
 // Load reads configuration from .env and environment variables.
@@ -45,6 +61,12 @@ func Load() (*Config, error) {
 		LogFormat:                getEnvOrDefault("LOG_FORMAT", "text"),
 		Port:                     getEnvOrDefault("PORT", "8080"),
 		RemoveCommandsOnShutdown: getBoolOrDefault("REMOVE_COMMANDS_ON_SHUTDOWN", false),
+		GeminiAPIKey:             os.Getenv("GEMINI_API_KEY"),
+		GeminiModel:              getEnvOrDefault("GEMINI_MODEL", "gemini-1.5-flash"),
+		LocoChannelID:            os.Getenv("LOCO_CHANNEL_ID"),
+		RedisURL:                 os.Getenv("REDIS_URL"),
+		MaxChatHistory:           getIntOrDefault("MAX_CHAT_HISTORY", 15),
+		ChatResponseChance:       getFloatOrDefault("CHAT_RESPONSE_CHANCE", 0.40),
 	}
 
 	if err := cfg.validate(); err != nil {
@@ -86,4 +108,28 @@ func getBoolOrDefault(key string, fallback bool) bool {
 		return fallback
 	}
 	return b
+}
+
+func getIntOrDefault(key string, fallback int) int {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	i, err := strconv.Atoi(val)
+	if err != nil {
+		return fallback
+	}
+	return i
+}
+
+func getFloatOrDefault(key string, fallback float64) float64 {
+	val := os.Getenv(key)
+	if val == "" {
+		return fallback
+	}
+	f, err := strconv.ParseFloat(val, 64)
+	if err != nil {
+		return fallback
+	}
+	return f
 }

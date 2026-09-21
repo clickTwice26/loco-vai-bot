@@ -20,6 +20,7 @@ type Bot struct {
 	logger        *slog.Logger
 	registry      *command.Registry
 	systemService service.SystemService
+	locoAIService service.LocoAIService
 }
 
 // New creates and initializes a new Bot instance.
@@ -28,6 +29,7 @@ func New(
 	logger *slog.Logger,
 	registry *command.Registry,
 	systemService service.SystemService,
+	locoAIService service.LocoAIService,
 ) (*Bot, error) {
 	session, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
@@ -37,7 +39,8 @@ func New(
 	// Configure gateway intents
 	session.Identify.Intents = discordgo.IntentsGuilds |
 		discordgo.IntentsGuildMessages |
-		discordgo.IntentsDirectMessages
+		discordgo.IntentsDirectMessages |
+		discordgo.IntentsMessageContent
 
 	return &Bot{
 		session:       session,
@@ -45,6 +48,7 @@ func New(
 		logger:        logger.With("module", "bot"),
 		registry:      registry,
 		systemService: systemService,
+		locoAIService: locoAIService,
 	}, nil
 }
 
@@ -56,7 +60,7 @@ func (b *Bot) Start(ctx context.Context) error {
 	b.session.AddHandler(event.OnReady(b.logger))
 	b.session.AddHandler(event.OnGuildCreate(b.logger))
 	b.session.AddHandler(event.OnGuildDelete(b.logger))
-	b.session.AddHandler(event.OnMessageCreate(b.logger))
+	b.session.AddHandler(event.OnMessageCreate(b.locoAIService, b.logger))
 
 	// Register interaction router
 	b.session.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
