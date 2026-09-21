@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "healthCheckPath": "/healthz",
+  "env": {
+    "ENV": "production",
+    "LOG_FORMAT": "json",
+    "LOG_LEVEL": "INFO"
+  }
+}

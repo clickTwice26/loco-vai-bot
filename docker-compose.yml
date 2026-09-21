@@ -1,0 +1,13 @@
+services:
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: localoy-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - ENV=production
+      - LOG_FORMAT=json
+      - LOG_LEVEL=INFO
