@@ -15,11 +15,5 @@ func OnReady(logger *slog.Logger) func(s *discordgo.Session, r *discordgo.Ready)
 			"user_id", r.User.ID,
 			"guilds_count", len(r.Guilds),
 		)
-
-		// Set default presence status
-		err := s.UpdateCustomStatus("Serving /help commands")
-		if err != nil {
-			logger.Warn("failed to update bot status", "error", err)
-		}
 	}
 }

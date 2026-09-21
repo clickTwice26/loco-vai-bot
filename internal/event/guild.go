@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,8 +14,6 @@ func OnGuildCreate(logger *slog.Logger) func(s *discordgo.Session, g *discordgo.
 			"guild_name", g.Name,
 			"member_count", g.MemberCount,
 		)
-
-		updatePresence(s, logger)
 	}
 }
 
@@ -26,15 +23,5 @@ func OnGuildDelete(logger *slog.Logger) func(s *discordgo.Session, g *discordgo.
 		logger.Info("guild left / removed",
 			"guild_id", g.ID,
 		)
-
-		updatePresence(s, logger)
-	}
-}
-
-func updatePresence(s *discordgo.Session, logger *slog.Logger) {
-	guildCount := len(s.State.Guilds)
-	status := fmt.Sprintf("/help | %d servers", guildCount)
-	if err := s.UpdateCustomStatus(status); err != nil {
-		logger.Debug("failed to update presence status", "error", err)
 	}
 }

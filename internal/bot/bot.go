@@ -15,12 +15,13 @@ import (
 
 // Bot manages the Discord session lifecycle, command registration, and event listeners.
 type Bot struct {
-	session       *discordgo.Session
-	cfg           *config.Config
-	logger        *slog.Logger
-	registry      *command.Registry
-	systemService service.SystemService
-	locoAIService service.LocoAIService
+	session         *discordgo.Session
+	cfg             *config.Config
+	logger          *slog.Logger
+	registry        *command.Registry
+	systemService   service.SystemService
+	locoAIService   service.LocoAIService
+	activityManager *ActivityManager
 }
 
 // New creates and initializes a new Bot instance.
@@ -43,12 +44,13 @@ func New(
 		discordgo.IntentsMessageContent
 
 	return &Bot{
-		session:       session,
-		cfg:           cfg,
-		logger:        logger.With("module", "bot"),
-		registry:      registry,
-		systemService: systemService,
-		locoAIService: locoAIService,
+		session:         session,
+		cfg:             cfg,
+		logger:          logger.With("module", "bot"),
+		registry:        registry,
+		systemService:   systemService,
+		locoAIService:   locoAIService,
+		activityManager: NewActivityManager(session, logger),
 	}, nil
 }
 
@@ -77,6 +79,9 @@ func (b *Bot) Start(ctx context.Context) error {
 		b.logger.Error("failed to sync slash commands", "error", err)
 		return fmt.Errorf("command synchronization failed: %w", err)
 	}
+
+	// Launch background activity status rotator
+	b.activityManager.Start(ctx)
 
 	b.logger.Info("bot is now fully online and listening for events")
 	return nil
