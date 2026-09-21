@@ -1,4 +1,4 @@
-.PHONY: all build run test clean tidy lint docker-build docker-run
+.PHONY: all build run test clean tidy lint docker-build docker-run docker-stop redis-up redis-down redis-logs
 
 APP_NAME = bot
 BUILD_DIR = bin
@@ -33,5 +33,20 @@ docker-build:
 	docker build -t localoy-bot:latest .
 
 docker-run:
-	@echo "Running Docker container..."
+	@echo "Running Docker containers..."
 	docker compose up --build -d
+
+docker-stop:
+	@echo "Stopping Docker containers..."
+	docker compose down
+
+redis-up:
+	@echo "Starting Redis container..."
+	docker compose up -d redis
+
+redis-down:
+	@echo "Stopping Redis container..."
+	docker compose stop redis
+
+redis-logs:
+	docker compose logs -f redis
