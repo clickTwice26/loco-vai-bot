@@ -60,8 +60,26 @@ func OnMessageCreate(locoAI service.LocoAIService, logger *slog.Logger) func(s *
 				authorName = m.Member.Nick
 			}
 
+			// Capture reply context if this message is replying to another message in the channel
+			formattedContent := cleanContent
+			if m.ReferencedMessage != nil {
+				refAuthor := "someone"
+				if m.ReferencedMessage.Author != nil {
+					if m.ReferencedMessage.Member != nil && m.ReferencedMessage.Member.Nick != "" {
+						refAuthor = m.ReferencedMessage.Member.Nick
+					} else {
+						refAuthor = m.ReferencedMessage.Author.Username
+					}
+				}
+				refSnippet := strings.TrimSpace(m.ReferencedMessage.Content)
+				if len(refSnippet) > 80 {
+					refSnippet = refSnippet[:77] + "..."
+				}
+				formattedContent = fmt.Sprintf("(replying to %s's \"%s\"): %s", refAuthor, refSnippet, cleanContent)
+			}
+
 			// Process message through Loco AI
-			reply, responded, err := locoAI.ProcessMessage(ctx, m.ChannelID, authorName, cleanContent, isMentioned, isReplyToBot)
+			reply, responded, err := locoAI.ProcessMessage(ctx, m.ChannelID, authorName, formattedContent, isMentioned, isReplyToBot)
 			if err != nil {
 				log.Error("failed to process message via Loco AI", "error", err, "author", authorName)
 				return

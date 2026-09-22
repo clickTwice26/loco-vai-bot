@@ -104,10 +104,12 @@ func (g *geminiClient) GenerateChatResponse(
 		return "", errors.New("GEMINI_API_KEY is not configured")
 	}
 
-	// Prepare conversation contents
-	contents := make([]geminiContent, 0, len(history)+1)
+	// Prepare conversation contents with alternating user/model turns
+	rawList := append([]memory.Message{}, history...)
+	rawList = append(rawList, currentMessage)
 
-	for _, msg := range history {
+	var contents []geminiContent
+	for _, msg := range rawList {
 		role := "user"
 		text := fmt.Sprintf("[%s]: %s", msg.Author, msg.Content)
 		if msg.Role == "model" {
@@ -115,21 +117,19 @@ func (g *geminiClient) GenerateChatResponse(
 			text = msg.Content
 		}
 
-		contents = append(contents, geminiContent{
-			Role: role,
-			Parts: []geminiPart{
-				{Text: text},
-			},
-		})
+		// If the previous turn had the same role, merge them to keep alternating turn structure
+		if len(contents) > 0 && contents[len(contents)-1].Role == role {
+			lastIdx := len(contents) - 1
+			contents[lastIdx].Parts = append(contents[lastIdx].Parts, geminiPart{Text: text})
+		} else {
+			contents = append(contents, geminiContent{
+				Role: role,
+				Parts: []geminiPart{
+					{Text: text},
+				},
+			})
+		}
 	}
-
-	// Add current message
-	contents = append(contents, geminiContent{
-		Role: "user",
-		Parts: []geminiPart{
-			{Text: fmt.Sprintf("[%s]: %s", currentMessage.Author, currentMessage.Content)},
-		},
-	})
 
 	reqPayload := geminiRequest{
 		SystemInstruction: &geminiSystemInstruction{
@@ -139,8 +139,8 @@ func (g *geminiClient) GenerateChatResponse(
 		},
 		Contents: contents,
 		GenerationConfig: &geminiGenerationConfig{
-			Temperature:     0.90,
-			MaxOutputTokens: 600,
+			Temperature:     0.85,
+			MaxOutputTokens: 800,
 			TopP:            0.95,
 		},
 	}
