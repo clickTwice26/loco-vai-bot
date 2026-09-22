@@ -83,6 +83,16 @@ type geminiResponse struct {
 	} `json:"error,omitempty"`
 }
 
+// UserChatMessage is a helper to construct a user message.
+func UserChatMessage(author, content string) memory.Message {
+	return memory.Message{
+		Role:      "user",
+		Author:    author,
+		Content:   content,
+		Timestamp: time.Now(),
+	}
+}
+
 // GenerateChatResponse formats conversation history and queries the Gemini API.
 func (g *geminiClient) GenerateChatResponse(
 	ctx context.Context,

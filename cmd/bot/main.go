@@ -11,6 +11,7 @@ import (
 	"localoy-bot/config"
 	"localoy-bot/internal/bot"
 	"localoy-bot/internal/command"
+	"localoy-bot/internal/loco"
 	"localoy-bot/internal/memory"
 	"localoy-bot/internal/server"
 	"localoy-bot/internal/service"
@@ -46,9 +47,18 @@ func run() error {
 	memoryStore := memory.NewStore(context.Background(), cfg.RedisURL, cfg.MaxChatHistory, log)
 	defer memoryStore.Close()
 
-	// Initialize Gemini AI Client and Persona Service
+	// Initialize Gemini AI Client, Upstream n8n Client, and Persona Service
 	geminiClient := service.NewGeminiClient(cfg.GeminiAPIKey, cfg.GeminiModel)
+	locoClient := loco.NewClient(
+		cfg.LocoUpstreamURL,
+		cfg.LocoWebhookSigningSecret,
+		cfg.PartnerAPIURL,
+		cfg.LocoServiceToken,
+		log,
+	)
+
 	locoAIService := service.NewLocoAIService(
+		locoClient,
 		geminiClient,
 		memoryStore,
 		cfg.LocoChannelID,
@@ -60,10 +70,11 @@ func run() error {
 		log.Info("loco AI chat feature initialized",
 			"channel_id", cfg.LocoChannelID,
 			"model", cfg.GeminiModel,
+			"upstream_enabled", locoClient.IsConfigured(),
 			"max_history", cfg.MaxChatHistory,
 		)
 	} else {
-		log.Info("loco AI chat feature is inactive (LOCO_CHANNEL_ID or GEMINI_API_KEY not set)")
+		log.Info("loco AI chat feature is inactive (LOCO_CHANNEL_ID or AI keys not set)")
 	}
 
 	// 4. Initialize command registry and attach middlewares
@@ -78,6 +89,7 @@ func run() error {
 		command.NewPingCommand(systemService),
 		command.NewEchoCommand(),
 		command.NewUserInfoCommand(),
+		command.NewLocoCommand(locoClient, geminiClient),
 		command.NewHelpCommand(cmdRegistry.All),
 	)
 

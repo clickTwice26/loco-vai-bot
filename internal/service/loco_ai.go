@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"localoy-bot/internal/loco"
 	"localoy-bot/internal/memory"
 )
 
@@ -29,6 +30,7 @@ type LocoAIService interface {
 }
 
 type locoAIService struct {
+	locoClient     loco.Client
 	geminiClient   GeminiClient
 	memoryStore    memory.Store
 	channelID      string
@@ -40,6 +42,7 @@ type locoAIService struct {
 
 // NewLocoAIService creates a new LocoAIService.
 func NewLocoAIService(
+	locoClient loco.Client,
 	geminiClient GeminiClient,
 	memoryStore memory.Store,
 	channelID string,
@@ -51,6 +54,7 @@ func NewLocoAIService(
 	}
 
 	return &locoAIService{
+		locoClient:     locoClient,
 		geminiClient:   geminiClient,
 		memoryStore:    memoryStore,
 		channelID:      strings.TrimSpace(channelID),
@@ -61,9 +65,15 @@ func NewLocoAIService(
 	}
 }
 
-// IsConfigured returns true if a target channel and Gemini API are ready.
+// IsConfigured returns true if a target channel and an AI backend (n8n or Gemini) are ready.
 func (s *locoAIService) IsConfigured() bool {
-	return s.channelID != "" && s.geminiClient != nil
+	if s.channelID == "" {
+		return false
+	}
+	if s.locoClient != nil && s.locoClient.IsConfigured() {
+		return true
+	}
+	return s.geminiClient != nil
 }
 
 // GetChannelID returns the configured AI channel ID.
@@ -135,9 +145,37 @@ func (s *locoAIService) ProcessMessage(
 
 	s.logger.Info("generating Loco AI response", "author", author, "history_len", len(history))
 
-	reply, err := s.geminiClient.GenerateChatResponse(ctx, s.systemPrompt, history, userMsg)
-	if err != nil {
-		return "", false, fmt.Errorf("loco ai response generation error: %w", err)
+	var reply string
+
+	// 1. If Upstream Localoy n8n workflow is active, query it first
+	if s.locoClient != nil && s.locoClient.IsConfigured() {
+		req := loco.UpstreamRequest{
+			UserID:         author,
+			Name:           author,
+			Location:       "",
+			ConversationID: channelID,
+			Message:        content,
+			SentAt:         time.Now().UTC(),
+		}
+		processed, err := s.locoClient.Ask(ctx, req)
+		if err == nil && processed != nil && processed.Reply != "" {
+			reply = processed.Reply
+		} else if err != nil {
+			s.logger.Warn("upstream loco query failed, attempting gemini fallback", "error", err)
+		}
+	}
+
+	// 2. Fallback to Gemini if upstream was unconfigured or failed
+	if reply == "" && s.geminiClient != nil {
+		geminiReply, err := s.geminiClient.GenerateChatResponse(ctx, s.systemPrompt, history, userMsg)
+		if err != nil {
+			return "", false, fmt.Errorf("loco ai response generation error: %w", err)
+		}
+		reply = geminiReply
+	}
+
+	if reply == "" {
+		return "", false, fmt.Errorf("no AI service was able to produce a response")
 	}
 
 	// Save Loco's reply in memory

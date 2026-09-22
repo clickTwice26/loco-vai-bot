@@ -45,6 +45,12 @@ type Config struct {
 
 	// ChatResponseChance is the probability (0.0 to 1.0) of Loco casually chiming in on unprompted messages.
 	ChatResponseChance float64
+
+	// Loco Standalone Service / Upstream Integration
+	LocoUpstreamURL          string
+	LocoWebhookSigningSecret string
+	PartnerAPIURL            string
+	LocoServiceToken         string
 }
 
 // Load reads configuration from .env and environment variables.
@@ -67,6 +73,10 @@ func Load() (*Config, error) {
 		RedisURL:                 os.Getenv("REDIS_URL"),
 		MaxChatHistory:           getIntOrDefault("MAX_CHAT_HISTORY", 15),
 		ChatResponseChance:       getFloatOrDefault("CHAT_RESPONSE_CHANCE", 0.40),
+		LocoUpstreamURL:          os.Getenv("LOCO_UPSTREAM_URL"),
+		LocoWebhookSigningSecret: os.Getenv("LOCO_WEBHOOK_SIGNING_SECRET"),
+		PartnerAPIURL:            os.Getenv("PARTNER_API_URL"),
+		LocoServiceToken:         os.Getenv("LOCO_SERVICE_TOKEN"),
 	}
 
 	if err := cfg.validate(); err != nil {

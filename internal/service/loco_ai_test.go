@@ -23,7 +23,7 @@ func TestLocoAIService(t *testing.T) {
 	memStore := memory.NewInMemoryStore(10)
 	geminiMock := &mockGeminiClient{response: "wassup bro"}
 
-	svc := NewLocoAIService(geminiMock, memStore, "target-channel-123", 1.0, logger)
+	svc := NewLocoAIService(nil, geminiMock, memStore, "target-channel-123", 1.0, logger)
 
 	ctx := context.Background()
 
