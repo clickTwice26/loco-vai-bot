@@ -51,6 +51,10 @@ type Config struct {
 	LocoWebhookSigningSecret string
 	PartnerAPIURL            string
 	LocoServiceToken         string
+	// Auto-poker Configuration
+	AutoPokeEnabled        bool
+	PokeMinIntervalMinutes int
+	PokeMaxIntervalMinutes int
 }
 
 // Load reads configuration from .env and environment variables.
@@ -77,6 +81,9 @@ func Load() (*Config, error) {
 		LocoWebhookSigningSecret: os.Getenv("LOCO_WEBHOOK_SIGNING_SECRET"),
 		PartnerAPIURL:            os.Getenv("PARTNER_API_URL"),
 		LocoServiceToken:         os.Getenv("LOCO_SERVICE_TOKEN"),
+		AutoPokeEnabled:          getBoolOrDefault("AUTO_POKE_ENABLED", true),
+		PokeMinIntervalMinutes:   getIntOrDefault("POKE_MIN_INTERVAL_MINUTES", 60),
+		PokeMaxIntervalMinutes:   getIntOrDefault("POKE_MAX_INTERVAL_MINUTES", 180),
 	}
 
 	if err := cfg.validate(); err != nil {

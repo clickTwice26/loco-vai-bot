@@ -22,6 +22,7 @@ type Bot struct {
 	systemService   service.SystemService
 	locoAIService   service.LocoAIService
 	activityManager *ActivityManager
+	pokerService    service.PokerService
 }
 
 // New creates and initializes a new Bot instance.
@@ -31,6 +32,7 @@ func New(
 	registry *command.Registry,
 	systemService service.SystemService,
 	locoAIService service.LocoAIService,
+	pokerService service.PokerService,
 ) (*Bot, error) {
 	session, err := discordgo.New("Bot " + cfg.DiscordToken)
 	if err != nil {
@@ -41,7 +43,8 @@ func New(
 	session.Identify.Intents = discordgo.IntentsGuilds |
 		discordgo.IntentsGuildMessages |
 		discordgo.IntentsDirectMessages |
-		discordgo.IntentsMessageContent
+		discordgo.IntentsMessageContent |
+		discordgo.IntentsGuildMembers
 
 	return &Bot{
 		session:         session,
@@ -51,6 +54,7 @@ func New(
 		systemService:   systemService,
 		locoAIService:   locoAIService,
 		activityManager: NewActivityManager(session, logger),
+		pokerService:    pokerService,
 	}, nil
 }
 
@@ -82,6 +86,11 @@ func (b *Bot) Start(ctx context.Context) error {
 
 	// Launch background activity status rotator
 	b.activityManager.Start(ctx)
+
+	// Launch background auto-poker if enabled
+	if b.cfg.AutoPokeEnabled && b.pokerService != nil {
+		b.pokerService.Start(ctx, b.session)
+	}
 
 	b.logger.Info("bot is now fully online and listening for events")
 	return nil

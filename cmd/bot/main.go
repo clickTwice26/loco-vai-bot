@@ -77,6 +77,16 @@ func run() error {
 		log.Info("loco AI chat feature is inactive (LOCO_CHANNEL_ID or AI keys not set)")
 	}
 
+	// Initialize Auto-Poker Service
+	pokerService := service.NewPokerService(
+		geminiClient,
+		memoryStore,
+		cfg.LocoChannelID,
+		cfg.PokeMinIntervalMinutes,
+		cfg.PokeMaxIntervalMinutes,
+		log,
+	)
+
 	// 4. Initialize command registry and attach middlewares
 	cmdRegistry := command.NewRegistry(log)
 	cmdRegistry.Use(
@@ -90,11 +100,12 @@ func run() error {
 		command.NewEchoCommand(),
 		command.NewUserInfoCommand(),
 		command.NewLocoCommand(locoClient, geminiClient),
+		command.NewPokeCommand(pokerService),
 		command.NewHelpCommand(cmdRegistry.All),
 	)
 
 	// 6. Instantiate Discord bot lifecycle manager
-	discordBot, err := bot.New(cfg, log, cmdRegistry, systemService, locoAIService)
+	discordBot, err := bot.New(cfg, log, cmdRegistry, systemService, locoAIService, pokerService)
 	if err != nil {
 		return fmt.Errorf("failed to initialize bot: %w", err)
 	}
