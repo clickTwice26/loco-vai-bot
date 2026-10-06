@@ -61,10 +61,16 @@ type geminiGenerationConfig struct {
 	TopP            float64 `json:"topP"`
 }
 
+type geminiSafetySetting struct {
+	Category  string `json:"category"`
+	Threshold string `json:"threshold"`
+}
+
 type geminiRequest struct {
 	SystemInstruction *geminiSystemInstruction `json:"system_instruction,omitempty"`
 	Contents          []geminiContent          `json:"contents"`
 	GenerationConfig  *geminiGenerationConfig  `json:"generationConfig,omitempty"`
+	SafetySettings    []geminiSafetySetting    `json:"safetySettings,omitempty"`
 }
 
 type geminiCandidate struct {
@@ -140,8 +146,14 @@ func (g *geminiClient) GenerateChatResponse(
 		Contents: contents,
 		GenerationConfig: &geminiGenerationConfig{
 			Temperature:     0.85,
-			MaxOutputTokens: 800,
+			MaxOutputTokens: 1000,
 			TopP:            0.95,
+		},
+		SafetySettings: []geminiSafetySetting{
+			{Category: "HARM_CATEGORY_HARASSMENT", Threshold: "BLOCK_ONLY_HIGH"},
+			{Category: "HARM_CATEGORY_HATE_SPEECH", Threshold: "BLOCK_ONLY_HIGH"},
+			{Category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", Threshold: "BLOCK_ONLY_HIGH"},
+			{Category: "HARM_CATEGORY_DANGEROUS_CONTENT", Threshold: "BLOCK_ONLY_HIGH"},
 		},
 	}
 
@@ -182,6 +194,10 @@ func (g *geminiClient) GenerateChatResponse(
 		return "", errors.New("empty response generated from Gemini")
 	}
 
-	answer := strings.TrimSpace(geminiResp.Candidates[0].Content.Parts[0].Text)
+	var sb strings.Builder
+	for _, part := range geminiResp.Candidates[0].Content.Parts {
+		sb.WriteString(part.Text)
+	}
+	answer := strings.TrimSpace(sb.String())
 	return answer, nil
 }

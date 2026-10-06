@@ -34,8 +34,9 @@ CRITICAL RULES:
 1. CONTEXTUAL & SMART: Don't give a boring generic greeting. Make it feel personalized, perceptive, and observant. Call them out on their habits, what they said, lurking, or the time of day.
 2. WITTY & SAVAGE (NOT HURTFUL): Deliver clever, funny, sometimes brutally savage banter, but NEVER be genuinely toxic, abusive, or hurtful. It must feel like hilarious group chat banter among close homies.
 3. LANGUAGE: Natural Banglish (e.g. "Oi...", "Kire...", "Bro...", "pera nai...", "shotti kore bolo...") or casual English matching the vibe.
-4. LENGTH: 1 to 2 punchy sentences.
-5. You MUST include their exact mention tag directly in the response.`
+4. COMPLETE THOUGHT: You MUST write a 100% complete, grammatically finished sentence that ends with punctuation (?, !, or .). NEVER trail off or leave a sentence cut off mid-thought.
+5. LENGTH: 1 to 2 punchy, completed sentences.
+6. You MUST include their exact mention tag directly in the response.`
 
 // PokerService periodically and randomly selects a server member to poke in the chat channel.
 type PokerService interface {
@@ -259,12 +260,49 @@ Task: Deliver an intelligent, witty, slightly savage but good-humored poke/roast
 	reply = strings.TrimSpace(reply)
 	reply = strings.Trim(reply, "\"")
 
+	// Ensure sentence is not truncated
+	reply = ensureSentenceCompletion(reply)
+
 	// Ensure mention tag is present
 	if !strings.Contains(reply, target.ID) && !strings.Contains(reply, mentionTag) {
 		reply = fmt.Sprintf("%s %s", mentionTag, reply)
 	}
 
 	return reply, nil
+}
+
+func ensureSentenceCompletion(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+
+	lower := strings.ToLower(s)
+	// If it was cut off mid-thought on common dangling Bangla/English words, complete it naturally
+	switch {
+	case strings.HasSuffix(lower, "tui ki"):
+		return s + " ghumabi na? 😴"
+	case strings.HasSuffix(lower, "tumi ki"):
+		return s + " ghumabe na? 😴"
+	case strings.HasSuffix(lower, "are you"):
+		return s + " sleeping or still awake? 👀"
+	case strings.HasSuffix(lower, "ki"):
+		return s + " obostha? 😂"
+	case strings.HasSuffix(lower, "na"):
+		return s + "?"
+	}
+
+	// If missing ending punctuation, add a question mark or exclamation mark depending on structure
+	lastChar := s[len(s)-1:]
+	if lastChar != "." && lastChar != "!" && lastChar != "?" && lastChar != "…" {
+		if strings.Contains(lower, "ki ") || strings.Contains(lower, "kobe") || strings.Contains(lower, "why") || strings.Contains(lower, "how") {
+			s += "?"
+		} else {
+			s += " 😂"
+		}
+	}
+
+	return s
 }
 
 // pickRandomCandidate selects a non-bot user who recently participated in the channel or server.
