@@ -63,11 +63,11 @@ func NewPokerService(
 	maxIntervalMinutes int,
 	logger *slog.Logger,
 ) PokerService {
-	if minIntervalMinutes < 60 {
-		minIntervalMinutes = 60 // Minimum gap must be at least 1 hour
+	if minIntervalMinutes <= 0 {
+		minIntervalMinutes = 60
 	}
 	if maxIntervalMinutes <= minIntervalMinutes {
-		maxIntervalMinutes = minIntervalMinutes + 120 // e.g. 1 hour to 3 hours
+		maxIntervalMinutes = minIntervalMinutes + 60
 	}
 
 	return &pokerService{
@@ -89,8 +89,13 @@ func (ps *pokerService) Start(ctx context.Context, session *discordgo.Session) {
 	}
 
 	go func() {
-		// Wait an initial random delay between 45 and 90 minutes after bot starts up
-		initialDelayMinutes := 45 + ps.rng.Intn(45)
+		// Calculate initial delay: randomly up to minInterval minutes (minimum 1 minute)
+		minMins := int(ps.minInterval.Minutes())
+		initialDelayMinutes := 1
+		if minMins > 1 {
+			initialDelayMinutes = 1 + ps.rng.Intn(minMins)
+		}
+
 		ps.logger.Info("auto-poker scheduled",
 			"channel_id", ps.channelID,
 			"min_gap", ps.minInterval,
@@ -111,7 +116,7 @@ func (ps *pokerService) Start(ctx context.Context, session *discordgo.Session) {
 			}
 			cancel()
 
-			// Calculate next randomized delay with a strict minimum gap of minInterval (at least 1 hour)
+			// Calculate next randomized delay with a strict minimum gap of minInterval
 			extraGapMinutes := 0
 			delta := int((ps.maxInterval - ps.minInterval).Minutes())
 			if delta > 0 {

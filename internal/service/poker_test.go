@@ -32,4 +32,13 @@ func TestPokerFallback(t *testing.T) {
 	if !strings.Contains(poke, "123456789") {
 		t.Errorf("expected mention tag or ID in poke, got: %s", poke)
 	}
+
+	// Test custom small intervals from environment
+	customPs := NewPokerService(nil, memStore, "test-channel", 3, 20, logger).(*pokerService)
+	if customPs.minInterval.Minutes() != 3 {
+		t.Errorf("expected min interval to be 3 minutes, got %v", customPs.minInterval)
+	}
+	if customPs.maxInterval.Minutes() != 20 {
+		t.Errorf("expected max interval to be 20 minutes, got %v", customPs.maxInterval)
+	}
 }
