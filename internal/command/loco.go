@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"localoy-bot/internal/loco"
+	"localoy-bot/internal/rag"
 	"localoy-bot/internal/service"
 
 	"github.com/bwmarrin/discordgo"
@@ -15,13 +16,15 @@ import (
 type LocoCommand struct {
 	locoClient   loco.Client
 	geminiClient service.GeminiClient
+	ragEngine    rag.Engine
 }
 
 // NewLocoCommand creates a new LocoCommand.
-func NewLocoCommand(locoClient loco.Client, geminiClient service.GeminiClient) *LocoCommand {
+func NewLocoCommand(locoClient loco.Client, geminiClient service.GeminiClient, ragEngine rag.Engine) *LocoCommand {
 	return &LocoCommand{
 		locoClient:   locoClient,
 		geminiClient: geminiClient,
+		ragEngine:    ragEngine,
 	}
 }
 
@@ -98,7 +101,12 @@ func (c *LocoCommand) Handle(ctx context.Context, s *discordgo.Session, i *disco
 
 	// Fallback to Gemini if upstream model is not configured
 	if c.geminiClient != nil {
-		systemPrompt := "You are Loco (Loco Vai), a friendly local guide for dining, events, and hangout spots."
+		systemPrompt := "You are Loco (Loco Vai), a friendly local guide for dining, events, hangout spots, and Localoy."
+		if c.ragEngine != nil {
+			if ragCtx, err := c.ragEngine.RetrieveContext(ctx, prompt, 3); err == nil && ragCtx != "" {
+				systemPrompt += "\n" + ragCtx
+			}
+		}
 		reply, err := c.geminiClient.GenerateChatResponse(ctx, systemPrompt, nil, service.UserChatMessage(user.Username, prompt))
 		if err != nil {
 			_, _ = s.FollowupMessageCreate(i.Interaction, true, &discordgo.WebhookParams{

@@ -10,6 +10,7 @@ import (
 
 	"localoy-bot/internal/loco"
 	"localoy-bot/internal/memory"
+	"localoy-bot/internal/rag"
 )
 
 const defaultLocoSystemPrompt = `You are Loco (affectionately known as "Loco Vai"), an authentic, sharp, witty, and deeply perceptive member of this Discord community hanging out in this channel.
@@ -40,6 +41,7 @@ type locoAIService struct {
 	locoClient     loco.Client
 	geminiClient   GeminiClient
 	memoryStore    memory.Store
+	ragEngine      rag.Engine
 	channelID      string
 	responseChance float64
 	logger         *slog.Logger
@@ -47,11 +49,12 @@ type locoAIService struct {
 	rng            *rand.Rand
 }
 
-// NewLocoAIService creates a new LocoAIService.
+// NewLocoAIService creates a new LocoAIService with RAG knowledge integration.
 func NewLocoAIService(
 	locoClient loco.Client,
 	geminiClient GeminiClient,
 	memoryStore memory.Store,
+	ragEngine rag.Engine,
 	channelID string,
 	responseChance float64,
 	logger *slog.Logger,
@@ -64,6 +67,7 @@ func NewLocoAIService(
 		locoClient:     locoClient,
 		geminiClient:   geminiClient,
 		memoryStore:    memoryStore,
+		ragEngine:      ragEngine,
 		channelID:      strings.TrimSpace(channelID),
 		responseChance: responseChance,
 		logger:         logger.With("module", "loco-ai"),
@@ -174,7 +178,16 @@ func (s *locoAIService) ProcessMessage(
 
 	// 2. Fallback to Gemini if upstream was unconfigured or failed
 	if reply == "" && s.geminiClient != nil {
-		geminiReply, err := s.geminiClient.GenerateChatResponse(ctx, s.systemPrompt, history, userMsg)
+		systemPrompt := s.systemPrompt
+		// Inject RAG knowledge context if relevant
+		if s.ragEngine != nil {
+			if ragCtx, err := s.ragEngine.RetrieveContext(ctx, content, 3); err == nil && ragCtx != "" {
+				systemPrompt += "\n" + ragCtx
+				s.logger.Debug("injected RAG knowledge into prompt", "query", content)
+			}
+		}
+
+		geminiReply, err := s.geminiClient.GenerateChatResponse(ctx, systemPrompt, history, userMsg)
 		if err != nil {
 			return "", false, fmt.Errorf("loco ai response generation error: %w", err)
 		}

@@ -29,8 +29,9 @@ WORKDIR /app
 RUN apk --no-cache add ca-certificates tzdata && \
     addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy compiled binary from builder
+# Copy compiled binary and seed knowledge base from builder
 COPY --from=builder /app/bin/bot /app/bot
+COPY --from=builder /app/data /app/data
 
 USER appuser
 

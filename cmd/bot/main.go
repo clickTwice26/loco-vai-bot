@@ -13,6 +13,7 @@ import (
 	"localoy-bot/internal/command"
 	"localoy-bot/internal/loco"
 	"localoy-bot/internal/memory"
+	"localoy-bot/internal/rag"
 	"localoy-bot/internal/server"
 	"localoy-bot/internal/service"
 	"localoy-bot/pkg/logger"
@@ -47,6 +48,13 @@ func run() error {
 	memoryStore := memory.NewStore(context.Background(), cfg.RedisURL, cfg.MaxChatHistory, log)
 	defer memoryStore.Close()
 
+	// Initialize RAG Engine & Knowledge Base
+	embedder := rag.NewGeminiEmbedder(cfg.GeminiAPIKey)
+	ragEngine := rag.NewEngine(context.Background(), embedder, cfg.RedisURL, log)
+	if seedCount, err := ragEngine.LoadFromDirectory(context.Background(), "data/knowledge"); err == nil {
+		log.Info("loaded seed knowledge base documents", "count", seedCount)
+	}
+
 	// Initialize Gemini AI Client, Upstream n8n Client, and Persona Service
 	geminiClient := service.NewGeminiClient(cfg.GeminiAPIKey, cfg.GeminiModel)
 	locoClient := loco.NewClient(
@@ -61,6 +69,7 @@ func run() error {
 		locoClient,
 		geminiClient,
 		memoryStore,
+		ragEngine,
 		cfg.LocoChannelID,
 		cfg.ChatResponseChance,
 		log,
@@ -99,7 +108,8 @@ func run() error {
 		command.NewPingCommand(systemService),
 		command.NewEchoCommand(),
 		command.NewUserInfoCommand(),
-		command.NewLocoCommand(locoClient, geminiClient),
+		command.NewLocoCommand(locoClient, geminiClient, ragEngine),
+		command.NewKBCommand(ragEngine),
 		command.NewPokeCommand(pokerService),
 		command.NewHelpCommand(cmdRegistry.All),
 	)

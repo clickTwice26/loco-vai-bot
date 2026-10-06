@@ -10,38 +10,64 @@ A production-ready Discord Bot built with **Go** and the **[discordgo](https://g
 localoy-bot/
 ├── cmd/
 │   └── bot/
-│       └── main.go               # Application entry point & graceful lifecycle orchestration
+│       └── main.go               # Application entry point & orchestration
 ├── config/
-│   ├── config.go                 # Strongly-typed environment configuration & validation
-│   └── config_test.go            # Unit tests for configuration
+│   ├── config.go                 # Strongly-typed environment configuration
+│   └── config_test.go            # Configuration tests
+├── data/
+│   └── knowledge/                # Seed RAG Knowledge Base files (.md)
+│       ├── team.md               # Localoy founding team, engineering, founders
+│       ├── systems.md            # Systems, services, architecture, databases
+│       └── product.md            # Hyperlocal discovery, experiences, mission
 ├── internal/
 │   ├── bot/
-│   │   ├── bot.go                # Bot lifecycle manager (session setup, intents, connect, disconnect)
-│   │   └── middleware.go         # Command middleware pipeline (panic recovery, latency logging)
+│   │   ├── bot.go                # Discord session lifecycle & connection manager
+│   │   ├── activity.go           # Dynamic rotating activity presence manager
+│   │   └── middleware.go         # Command middleware pipeline (recovery, latency)
 │   ├── command/
-│   │   ├── command.go            # Command interface, registry, routing, & Discord sync
-│   │   ├── command_test.go       # Unit tests for command registry
-│   │   ├── ping.go               # /ping - Latency, heartbeat, uptime & runtime memory stats
+│   │   ├── command.go            # Slash command registry & router
+│   │   ├── kb.go                 # /kb - Search, add, list & reload RAG knowledge
+│   │   ├── loco.go               # /loco - Curated plans, itineraries & experiences
+│   │   ├── poke.go               # /poke - Playful contextual homie roasts
+│   │   ├── ping.go               # /ping - Latency, heartbeat, uptime & runtime memory
 │   │   ├── echo.go               # /echo - Option parsing & ephemeral message demo
-│   │   ├── userinfo.go           # /userinfo - User target inspection & Discord embeds
-│   │   └── help.go               # /help - Auto-generated interactive command directory
+│   │   ├── userinfo.go           # /userinfo - User target inspection & rich embeds
+│   │   └── help.go               # /help - Dynamically generated command directory
 │   ├── event/
-│   │   ├── ready.go              # Ready event handler (presence & initial logging)
-│   │   ├── guild.go              # Guild join/leave events & dynamic presence updates
-│   │   └── message.go            # MessageCreate event handler (e.g. mention nudges)
+│   │   ├── ready.go              # Ready event handler
+│   │   ├── guild.go              # Guild join/leave events & status updates
+│   │   └── message.go            # Message handler with Loco AI channel routing
+│   ├── loco/
+│   │   ├── client.go             # Upstream n8n model & Partner Backend card client
+│   │   ├── formatter.go          # Multi-embed Discord renderer with card images
+│   │   ├── models.go             # Upstream and card data models
+│   │   └── signature.go          # HMAC-SHA256 request signer
+│   ├── memory/
+│   │   ├── memory.go             # Chat message models & Store interface
+│   │   ├── redis_store.go        # Redis conversation memory store
+│   │   └── memory_store.go       # In-memory fallback ring buffer store
+│   ├── rag/
+│   │   ├── embedding.go          # Google Gemini dense vector embedder
+│   │   ├── loader.go             # Markdown knowledge loader and chunker
+│   │   ├── rag.go                # Knowledge Document and Search models
+│   │   ├── similarity.go         # Cosine vector similarity math
+│   │   └── store.go              # Dual vector store (in-memory + Redis cache)
+│   ├── server/
+│   │   └── server.go             # HTTP server for /healthz platform probes
 │   └── service/
-│       ├── system.go             # Domain business logic (runtime metrics, uptime)
-│       └── system_test.go        # Unit tests for domain services
+│       ├── gemini.go             # Gemini conversational LLM client
+│       ├── loco_ai.go            # Loco AI persona and conversation orchestrator
+│       ├── poker.go              # Spontaneous contextual auto-poker
+│       └── system.go             # Runtime system metrics
 ├── pkg/
 │   └── logger/
-│       └── logger.go             # High-performance structured logging with slog (JSON & Text)
+│       └── logger.go             # Structured logging using slog
 ├── .env.example                  # Environment configuration template
-├── .gitignore                    # Git ignore file
-├── Dockerfile                    # Multi-stage lightweight production Docker build
+├── Dockerfile                    # Multi-stage production container build
 ├── docker-compose.yml            # Docker Compose setup
-├── Makefile                      # Build, test, lint, and run scripts
+├── Makefile                      # Build, test, and run scripts
 ├── go.mod                        # Go module dependencies
-└── go.sum                        # Checksums for dependencies
+└── README.md                     # Comprehensive documentation
 ```
 
 ---
