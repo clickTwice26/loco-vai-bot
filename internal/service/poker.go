@@ -16,24 +16,26 @@ import (
 
 var defaultFallbackPokes = []string{
 	"Oi <@%s>, screen er dike eivabe takaye thakle code automatically fix hoye jabe na, start typing! ☕",
-	"<@%s> bhai tumi ki shudhu Discord e online thakar salary pao naki kaj o koro? 😂",
-	"<@%s> are you actually working or just shifting between browser tabs to look busy? Shotto kore bolo.",
-	"<@%s> shobai dekhlam kaj kortese, ar tumi ekhane shanti moto lurk korteso. Shundor system!",
-	"Kire <@%s>, ghumabi kobe? Shob shomoy online dekhi, tumi ki cyborg naki? 🤖",
+	"<@%s> bhai tumi ki shudhu Discord e online thakar salary pao naki kaj o koro? Shotto kore bolo. 😂",
+	"<@%s> are you actually working or just shifting between browser tabs to look productive? We see you.",
+	"<@%s> shobai dekhlam kaj kortese, ar tumi ekhane shanti moto CCTV camera hoye lurk korteso. Shundor system!",
+	"Kire <@%s>, ghumabi kobe? Raat-din online dekhi, tumi ki cyborg naki? 🤖",
 	"<@%s> ekta serious question chilo... coffee shesh hoise naki brain er battery shesh hoise?",
 	"<@%s> joto time Discord e spend korteso tar 10%% time code e dile amra koyek mash agei release diye ditam bhai. 🚀",
-	"Oi <@%s>, silent spectator hoye thakle cholbe? Kono update ache naki chill mode e aso?",
+	"Oi <@%s>, silent spectator hoye thakle cholbe? Kono update ache naki full chill mode?",
+	"<@%s> bhai tumi ki ghosting er master class niccho naki keyboard haraye gese? Kichu toh bolo! 👻",
+	"<@%s> ekta plan bana, Gulshan e naki Banani te biryani khawabi kobe? Shudhu kotha bolle hobe na. 🍗",
 }
 
-const pokeSystemInstruction = `You are Loco (Loco Vai), a witty, sharp, hilarious friend hanging out in this Discord server.
-Your task: Deliver a spontaneous, meaningful poke or light-hearted roast targeting a specific user.
+const pokeSystemInstruction = `You are Loco (Loco Vai), an exceptionally smart, hilarious, perceptive Discord friend hanging out in this server.
+Your mission: Spontaneously poke or playfully roast a specific user with razor-sharp wit and personality.
 
-CRITICAL GUIDELINES:
-1. Tone: Playful group chat banter. Make it clever, witty, and sometimes brutally savage in a funny homie way.
-2. ABSOLUTELY FORBIDDEN: Never be toxic, hateful, genuinely hurtful, or abusive. It must feel like hilarious banter among close friends that makes everyone laugh.
-3. Language: Natural Bangla/Banglish or English matching the chat's vibe (e.g. "Oi @user...", "Kire @user...", "Bro @user...").
-4. Length: 1 to 2 punchy, conversational sentences.
-5. You MUST include the target user's mention tag directly in your response.`
+CRITICAL RULES:
+1. CONTEXTUAL & SMART: Don't give a boring generic greeting. Make it feel personalized, perceptive, and observant. Call them out on their habits, what they said, lurking, or the time of day.
+2. WITTY & SAVAGE (NOT HURTFUL): Deliver clever, funny, sometimes brutally savage banter, but NEVER be genuinely toxic, abusive, or hurtful. It must feel like hilarious group chat banter among close homies.
+3. LANGUAGE: Natural Banglish (e.g. "Oi...", "Kire...", "Bro...", "pera nai...", "shotti kore bolo...") or casual English matching the vibe.
+4. LENGTH: 1 to 2 punchy sentences.
+5. You MUST include their exact mention tag directly in the response.`
 
 // PokerService periodically and randomly selects a server member to poke in the chat channel.
 type PokerService interface {
@@ -141,7 +143,7 @@ func (ps *pokerService) ExecuteRandomPoke(ctx context.Context, session *discordg
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
-	// Enforce 1-hour minimum gap between pokes
+	// Enforce minimum gap between pokes
 	if !ps.lastPokeTime.IsZero() && time.Since(ps.lastPokeTime) < ps.minInterval {
 		return fmt.Errorf("poke rate limit enforced: last poke was %s ago", time.Since(ps.lastPokeTime))
 	}
@@ -182,13 +184,13 @@ func (ps *pokerService) ExecuteRandomPoke(ctx context.Context, session *discordg
 	return nil
 }
 
-// CraftPoke uses Gemini or contextual logic to craft a meaningful, witty poke.
+// CraftPoke uses Gemini with deep multi-dimensional context to craft an intelligent, perceptive poke.
 func (ps *pokerService) CraftPoke(ctx context.Context, target *discordgo.User) (string, error) {
 	if ps.geminiClient == nil {
 		return ps.fallbackPoke(target), nil
 	}
 
-	// Fetch recent chat history to ground the poke in reality
+	// 1. Fetch recent chat history
 	var history []memory.Message
 	if ps.memoryStore != nil {
 		if h, err := ps.memoryStore.GetHistory(ctx, ps.channelID); err == nil {
@@ -196,12 +198,50 @@ func (ps *pokerService) CraftPoke(ctx context.Context, target *discordgo.User) (
 		}
 	}
 
+	// 2. Compute time-of-day context (Dhaka Time UTC+6)
+	dhakaLoc := time.FixedZone("Asia/Dhaka", 6*3600)
+	now := time.Now().In(dhakaLoc)
+	hour := now.Hour()
+	var timeContext string
+	switch {
+	case hour >= 0 && hour < 5:
+		timeContext = fmt.Sprintf("Late night (%d:%02d AM). If funny, tease their nocturnal sleep schedule, insomnia, or late night screen glare.", hour, now.Minute())
+	case hour >= 5 && hour < 11:
+		timeContext = fmt.Sprintf("Morning (%d:%02d AM). If funny, tease them about waking up, whether their brain is working, or needing coffee/cha.", hour, now.Minute())
+	case hour >= 11 && hour < 16:
+		timeContext = fmt.Sprintf("Midday/Lunch time (%d:%02d PM). If funny, tease about food, hunger, post-lunch bhaat ghoom, or surviving tasks.", hour, now.Minute())
+	case hour >= 16 && hour < 20:
+		timeContext = fmt.Sprintf("Late afternoon/Evening (%d:%02d PM). Tease about wrapping up, adda, snacks, or chill plans.", hour, now.Minute())
+	default:
+		timeContext = fmt.Sprintf("Night (%d:%02d PM). Peak adda time, dinner plans, gaming, or chilling.", hour, now.Minute())
+	}
+
+	// 3. Analyze target's recent statements in history
+	var targetLastStatement string
+	for i := len(history) - 1; i >= 0; i-- {
+		msg := history[i]
+		if msg.Role == "user" && (strings.EqualFold(msg.Author, target.Username) || strings.Contains(msg.Author, target.Username)) {
+			targetLastStatement = msg.Content
+			break
+		}
+	}
+
+	var activityContext string
+	if targetLastStatement != "" {
+		activityContext = fmt.Sprintf("Target recently said: \"%s\". If relevant, make a sharp witty callback to that!", targetLastStatement)
+	} else {
+		activityContext = "Target has NOT spoken recently in the channel. They are lurking silently or ghosting. Tease them for being a silent spectator / ghosting!"
+	}
+
 	displayName := target.Username
 	mentionTag := fmt.Sprintf("<@%s>", target.ID)
 
-	prompt := fmt.Sprintf(
-		"Give a random, spontaneous, meaningful poke/roast to %s in the chat. Use their mention tag %s in the sentence.",
-		displayName, mentionTag,
+	prompt := fmt.Sprintf(`Target User: %s (%s)
+Time of Day: %s
+User Activity: %s
+
+Task: Deliver an intelligent, witty, slightly savage but good-humored poke/roast to %s. Remember to include %s directly.`,
+		displayName, mentionTag, timeContext, activityContext, displayName, mentionTag,
 	)
 
 	currentMsg := memory.Message{
@@ -217,6 +257,8 @@ func (ps *pokerService) CraftPoke(ctx context.Context, target *discordgo.User) (
 	}
 
 	reply = strings.TrimSpace(reply)
+	reply = strings.Trim(reply, "\"")
+
 	// Ensure mention tag is present
 	if !strings.Contains(reply, target.ID) && !strings.Contains(reply, mentionTag) {
 		reply = fmt.Sprintf("%s %s", mentionTag, reply)
