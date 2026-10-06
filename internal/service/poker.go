@@ -19,12 +19,12 @@ var defaultFallbackPokes = []string{
 	"<@%s> bhai tumi ki shudhu Discord e online thakar salary pao naki kaj o koro? Shotto kore bolo. 😂",
 	"<@%s> are you actually working or just shifting between browser tabs to look productive? We see you.",
 	"<@%s> shobai dekhlam kaj kortese, ar tumi ekhane shanti moto CCTV camera hoye lurk korteso. Shundor system!",
-	"Kire <@%s>, ghumabi kobe? Raat-din online dekhi, tumi ki cyborg naki? 🤖",
+	"Kire <@%s>, ghumabe kobe? Raat-din online dekhi, tumi ki cyborg naki? 🤖",
 	"<@%s> ekta serious question chilo... coffee shesh hoise naki brain er battery shesh hoise?",
 	"<@%s> joto time Discord e spend korteso tar 10%% time code e dile amra koyek mash agei release diye ditam bhai. 🚀",
 	"Oi <@%s>, silent spectator hoye thakle cholbe? Kono update ache naki full chill mode?",
 	"<@%s> bhai tumi ki ghosting er master class niccho naki keyboard haraye gese? Kichu toh bolo! 👻",
-	"<@%s> ekta plan bana, Gulshan e naki Banani te biryani khawabi kobe? Shudhu kotha bolle hobe na. 🍗",
+	"<@%s> ekta plan bana, Gulshan e naki Banani te biryani khawabe kobe? Shudhu kotha bolle hobe na. 🍗",
 }
 
 const pokeSystemInstruction = `You are Loco (Loco Vai), an exceptionally smart, hilarious, perceptive Discord friend hanging out in this server.
@@ -33,7 +33,8 @@ Your mission: Spontaneously poke or playfully roast a specific user with razor-s
 CRITICAL RULES:
 1. CONTEXTUAL & SMART: Don't give a boring generic greeting. Make it feel personalized, perceptive, and observant. Call them out on their habits, what they said, lurking, or the time of day.
 2. WITTY & SAVAGE (NOT HURTFUL): Deliver clever, funny, sometimes brutally savage banter, but NEVER be genuinely toxic, abusive, or hurtful. It must feel like hilarious group chat banter among close homies.
-3. LANGUAGE: Natural Banglish (e.g. "Oi...", "Kire...", "Bro...", "pera nai...", "shotti kore bolo...") or casual English matching the vibe.
+3. LANGUAGE & PRONOUNS: Natural Banglish (e.g. "Oi...", "Kire...", "Bro...", "pera nai...", "shotti kore bolo...") or casual English matching the vibe.
+   PRONOUN MANDATE: Always address the user with "tumi" (or "apni"). NEVER use "tui", "tor", or "tore" under any circumstances.
 4. COMPLETE THOUGHT: You MUST write a 100% complete, grammatically finished sentence that ends with punctuation (?, !, or .). NEVER trail off or leave a sentence cut off mid-thought.
 5. LENGTH: 1 to 2 punchy, completed sentences.
 6. You MUST include their exact mention tag directly in the response.`
@@ -260,6 +261,9 @@ Task: Deliver an intelligent, witty, slightly savage but good-humored poke/roast
 	reply = strings.TrimSpace(reply)
 	reply = strings.Trim(reply, "\"")
 
+	// Sanitize pronouns: enforce 'tumi' over 'tui'
+	reply = sanitizePronouns(reply)
+
 	// Ensure sentence is not truncated
 	reply = ensureSentenceCompletion(reply)
 
@@ -271,6 +275,39 @@ Task: Deliver an intelligent, witty, slightly savage but good-humored poke/roast
 	return reply, nil
 }
 
+func sanitizePronouns(s string) string {
+	// Replace any accidental 'tui' variants with 'tumi'
+	replacements := []struct {
+		old string
+		new string
+	}{
+		{" tui ", " tumi "},
+		{" Tui ", " Tumi "},
+		{" tui,", " tumi,"},
+		{" Tui,", " Tumi,"},
+		{" tui?", " tumi?"},
+		{" Tui?", " Tumi?"},
+		{" tor ", " tomar "},
+		{" Tor ", " Tomar "},
+		{" tore ", " tomake "},
+		{" Tore ", " Tomake "},
+		{" tuke ", " tomake "},
+		{" ghumabi ", " ghumabe "},
+		{" khawabi ", " khawabe "},
+		{" bolbi ", " bolbe "},
+		{" korbi ", " korbe "},
+	}
+	for _, r := range replacements {
+		s = strings.ReplaceAll(s, r.old, r.new)
+	}
+	if strings.HasPrefix(s, "Tui ") {
+		s = "Tumi " + s[4:]
+	} else if strings.HasPrefix(s, "tui ") {
+		s = "tumi " + s[4:]
+	}
+	return s
+}
+
 func ensureSentenceCompletion(s string) string {
 	s = strings.TrimSpace(s)
 	if s == "" {
@@ -280,9 +317,7 @@ func ensureSentenceCompletion(s string) string {
 	lower := strings.ToLower(s)
 	// If it was cut off mid-thought on common dangling Bangla/English words, complete it naturally
 	switch {
-	case strings.HasSuffix(lower, "tui ki"):
-		return s + " ghumabi na? 😴"
-	case strings.HasSuffix(lower, "tumi ki"):
+	case strings.HasSuffix(lower, "tui ki") || strings.HasSuffix(lower, "tumi ki"):
 		return s + " ghumabe na? 😴"
 	case strings.HasSuffix(lower, "are you"):
 		return s + " sleeping or still awake? 👀"
